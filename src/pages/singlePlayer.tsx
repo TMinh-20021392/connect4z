@@ -1,82 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Text } from 'zmp-ui';
-import GameState, { Player } from '../components/gameState';
+import GameState from '../components/gameState';
 
 const SinglePlayer: React.FC = () => {
-  // Game state
   const [resetTrigger, setResetTrigger] = useState<number>(0);
   const [gameResult, setGameResult] = useState<string | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<Player>(1);
+  const [aiTurn, setAiTurn] = useState<boolean>(false);
   
-  // Player configuration
-  // When humanIsPlayer1 is true: Human is red (Player 1), AI is yellow (Player 2)
-  // When humanIsPlayer1 is false: AI is red (Player 1), Human is yellow (Player 2)
-  const [humanIsPlayer1, setHumanIsPlayer1] = useState<boolean>(true);
+  // Handle AI turn
+  useEffect(() => {
+    if (aiTurn && !gameResult) {
+      // Simple timeout to simulate AI "thinking"
+      const aiTimeout = setTimeout(() => {
+        // AI makes a random move by simulating a click on a column
+        const aiMoveEvent = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+        });
+        
+        // Get all column cells that are available (have at least one empty cell)
+        const boardElement = document.querySelector('.board');
+        if (boardElement) {
+          const topRow = boardElement.querySelectorAll('.flex:first-child > .cursor-pointer');
+          const availableCols = Array.from(topRow).filter(col => {
+            return col.querySelector('.bg-red-500, .bg-yellow-400') === null;
+          });
+          
+          if (availableCols.length > 0) {
+            // Choose random column from available ones
+            const randomCol = availableCols[Math.floor(Math.random() * availableCols.length)];
+            randomCol.dispatchEvent(aiMoveEvent);
+          }
+        }
+        
+        setAiTurn(false);
+      }, 1000);
+      
+      return () => clearTimeout(aiTimeout);
+    }
+    return undefined;
+  }, [aiTurn, gameResult]);
   
-  // Calculate which player number the AI controls (1 or 2 or null for two human players)
-  const aiPlayer: Player = humanIsPlayer1 ? 2 : 1;
-  
-  // Handle turn change
-  const handleTurnChange = (player: Player) => {
-    setCurrentPlayer(player);
+  // Handle when a player's turn ends
+  const handleTurnEnd = (player: 1 | 2 | null) => {
+    if (player === 1) {
+      // After player 1's turn, it's AI's turn
+      setAiTurn(true);
+    }
   };
   
   // Handle game end
-  const handleGameEnd = (winner: Player) => {
-    let resultMessage;
-    
-    if (winner === null) {
-      resultMessage = "It's a draw!";
+  const handleGameEnd = (winner: 1 | 2 | null) => {
+    if (winner === 1) {
+      setGameResult("You win! Congratulations!");
+    } else if (winner === 2) {
+      setGameResult("AI wins! Better luck next time.");
     } else {
-      // Check if human player won based on current configuration
-      const humanWon = (humanIsPlayer1 && winner === 1) || (!humanIsPlayer1 && winner === 2);
-      resultMessage = humanWon ? "You win! Congratulations!" : "AI wins! Better luck next time.";
+      setGameResult("It's a draw!");
     }
-    
-    setGameResult(resultMessage);
   };
   
-  // Reset the game and alternate who goes first
+  // Reset the game
   const resetGame = () => {
-    // Clear game result immediately
-    setGameResult(null);
-    
-    // Toggle player assignment
-    setHumanIsPlayer1(prev => !prev);
-    
-    // Reset all state variables including currentPlayer
-    setCurrentPlayer(1); // Always reset to Player 1
-    
-    // Increment reset trigger to force board reset
-    // Do this last to ensure all state variables are updated before board resets
     setResetTrigger(prev => prev + 1);
-  };
-  
-  // Get description text based on current player assignment
-  const getPlayerDescription = () => {
-    if (humanIsPlayer1) {
-      return "You play as Red (First)";
-    } else {
-      return "AI plays as Red (First)";
-    }
+    setGameResult(null);
   };
   
   return (
     <Box className="flex flex-col items-center p-4">
       <Text size="xLarge" className="font-bold mb-6">Single Player Mode</Text>
       
-      <Text className="mb-4">
-        {getPlayerDescription()}
-      </Text>
-      
       <Box className="board mb-6">
         <GameState 
-          onGameEnd={handleGameEnd}
-          onTurnChange={handleTurnChange}
-          resetTrigger={resetTrigger}
-          aiPlayer={aiPlayer}
-          aiDelay={700} // Slightly longer delay for more natural feel
-          data-testid="game-state"
+          onGameEnd={handleGameEnd} 
+          resetTrigger={resetTrigger} 
         />
       </Box>
       

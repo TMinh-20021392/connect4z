@@ -11,6 +11,7 @@ import { AppProps } from "zmp-ui/app";
 import MenuPage from "@/pages/menuPage";
 import SinglePlayerGame from "@/pages/singlePlayer";
 import HowToPlay from "@/pages/howToPlay";
+import TwoPlayer from "@/pages/twoPlayer";
 
 const Layout = () => {
   return (
@@ -20,6 +21,7 @@ const Layout = () => {
           <AnimationRoutes>
             <Route path="/" element={<MenuPage />}></Route>
             <Route path="/single-player" element={<SinglePlayerGame />}></Route>
+            <Route path="/two-player" element={<TwoPlayer />}></Route>
             <Route path="/how-to-play" element={<HowToPlay />}></Route>
           </AnimationRoutes>
         </ZMPRouter>

@@ -20,12 +20,12 @@ const MenuPage: React.FC = () => {
         </Button>
         
         <Button 
-          variant="secondary" 
+          variant="primary" 
           fullWidth
           className="h-12"
-          disabled
+          onClick={() => navigate('/two-player')}
         >
-          Two Player (Coming Soon)
+          Two Player
         </Button>
         
         <Button 
