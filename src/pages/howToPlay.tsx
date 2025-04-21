@@ -17,7 +17,7 @@ const HowToPlay: React.FC = () => {
         <Box className="ml-4 mb-4">
           <Box className="flex mb-2">
             <Icon icon="zi-chevron-right" className="mr-2 mt-1" />
-            <Text>Players take turns dropping colored discs into a 7-column, 6-row grid.</Text>
+            <Text>Players take turns dropping colored discs into a 7-column, 6-row grid. Red always goes first, and yellow goes second. </Text>
           </Box>
           <Box className="flex mb-2">
             <Icon icon="zi-chevron-right" className="mr-2 mt-1" />
@@ -39,9 +39,9 @@ const HowToPlay: React.FC = () => {
         
         <Text className="font-bold mb-1">Single Player</Text>
         <Text className="mb-3">
-          Challenge the AI in single-player mode. You play as the red discs (Player 1) and the AI plays 
-          as the yellow discs (Player 2).
+          Challenge the AI in single-player mode. You start as red in the first game, then roles alternate with each rematch.
         </Text>
+
         
         <Text className="font-bold mb-1">Two Player (Coming Soon)</Text>
         <Text className="mb-3">
