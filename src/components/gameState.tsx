@@ -19,7 +19,7 @@ const GameState: React.FC<GameStateProps> = ({
   onTurnChange,
   resetTrigger = 0, 
   aiPlayer = null,
-  aiDelay = 500,
+  aiDelay = 5,
   'data-testid': dataTestId
 }) => {
   const ROWS = 6;
@@ -33,30 +33,64 @@ const GameState: React.FC<GameStateProps> = ({
   const [currentPlayer, setCurrentPlayer] = useState<Player>(1);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [winner, setWinner] = useState<Player>(null);
+  const [isAIThinking, setIsAIThinking] = useState<boolean>(false);
+  
+  // Keep track of resetTrigger changes
+  const prevResetTriggerRef = useRef<number>(resetTrigger);
   
   // Reset the game when resetTrigger changes
   useEffect(() => {
-    setBoard(createEmptyBoard());
-    setCurrentPlayer(1); // Always start with player 1
-    setGameOver(false);
-    setWinner(null);
+    if (resetTrigger !== prevResetTriggerRef.current) {
+      console.log("Resetting game board...");
+      setBoard(createEmptyBoard());
+      setCurrentPlayer(1); // Always start with player 1
+      setGameOver(false);
+      setWinner(null);
+      setIsAIThinking(false);
+      prevResetTriggerRef.current = resetTrigger;
+    }
   }, [resetTrigger]);
   
-  // Handle AI turn
+  // Handle initial AI turn if AI is Player 1
+  useEffect(() => {
+    // Check if it's a fresh board (all slots are null)
+    const isFreshBoard = board.every(row => row.every(cell => cell === null));
+    
+    // Make AI move if it's Player 1 AND the board is fresh
+    if (isFreshBoard && currentPlayer === 1 && aiPlayer === 1 && !gameOver && !isAIThinking) {
+      console.log("AI should make first move as Player 1");
+      setIsAIThinking(true);
+      
+      const timeoutId = setTimeout(() => {
+        const bestCol = getBestMove(board, 1);
+        dropDisc(bestCol);
+        setIsAIThinking(false);
+      }, aiDelay);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [resetTrigger, board, currentPlayer, aiPlayer]);
+  
+  // Handle AI turn during game
   useEffect(() => {
     // Only trigger AI move when:
     // 1. Game is not over
     // 2. Current player is the AI player
     // 3. AI player is defined
-    if (!gameOver && currentPlayer === aiPlayer && aiPlayer !== null) {
+    // 4. AI is not already thinking
+    if (!gameOver && currentPlayer === aiPlayer && aiPlayer !== null && !isAIThinking) {
+      console.log(`AI (Player ${aiPlayer}) is making a move...`);
+      setIsAIThinking(true);
+      
       const timeoutId = setTimeout(() => {
         const bestCol = getBestMove(board, currentPlayer);
         dropDisc(bestCol);
+        setIsAIThinking(false);
       }, aiDelay);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [currentPlayer, gameOver, aiPlayer, board]);
+  }, [currentPlayer, gameOver, aiPlayer, board, isAIThinking]);
   
   // Notify parent about turn change
   useEffect(() => {
@@ -94,6 +128,8 @@ const GameState: React.FC<GameStateProps> = ({
     if (player === null) return 0; // Safety check
     
     const availableCols = findAvailableColumns(board);
+    if (availableCols.length === 0) return -1; // No moves available
+    
     const opponent = player === 1 ? 2 : 1;
     
     // First check if AI can win in one move
@@ -193,21 +229,25 @@ const GameState: React.FC<GameStateProps> = ({
   
   // Check if there's a winner after each move
   useEffect(() => {
+    // Skip this check if we're already in a game over state
+    if (gameOver) return;
+    
     const gameWinner = checkForWinner(board);
     const isFull = board.every(row => row.every(cell => cell !== null));
     
     if (gameWinner !== null || isFull) {
+      console.log(`Game over! Winner: ${gameWinner}`);
       setGameOver(true);
       setWinner(gameWinner);
       if (onGameEnd) {
         onGameEnd(gameWinner);
       }
     }
-  }, [board, onGameEnd]);
+  }, [board, onGameEnd, gameOver]);
   
   // Make a move in the selected column
   const dropDisc = (col: number) => {
-    if (gameOver) return;
+    if (gameOver || isAIThinking) return;
     
     // Find the first empty cell from bottom to top
     const row = getNextEmptyRow(board, col);
@@ -230,6 +270,9 @@ const GameState: React.FC<GameStateProps> = ({
     // Game must not be over
     if (gameOver) return false;
     
+    // Can't make moves while AI is thinking
+    if (isAIThinking) return false;
+    
     return true;
   };
   
@@ -241,7 +284,9 @@ const GameState: React.FC<GameStateProps> = ({
           ? winner 
             ? `Player ${winner} wins!` 
             : "It's a draw!" 
-          : `Player ${currentPlayer}'s turn`}
+          : isAIThinking
+            ? "AI is thinking..."
+            : `Player ${currentPlayer}'s turn`}
       </Text>
       
       {/* Board */}

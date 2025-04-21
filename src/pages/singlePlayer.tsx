@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, Text } from 'zmp-ui';
 import GameState, { Player } from '../components/gameState';
 
@@ -6,6 +6,7 @@ const SinglePlayer: React.FC = () => {
   // Game state
   const [resetTrigger, setResetTrigger] = useState<number>(0);
   const [gameResult, setGameResult] = useState<string | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<Player>(1);
   
   // Player configuration
   // When humanIsPlayer1 is true: Human is red (Player 1), AI is yellow (Player 2)
@@ -14,6 +15,11 @@ const SinglePlayer: React.FC = () => {
   
   // Calculate which player number the AI controls (1 or 2 or null for two human players)
   const aiPlayer: Player = humanIsPlayer1 ? 2 : 1;
+  
+  // Handle turn change
+  const handleTurnChange = (player: Player) => {
+    setCurrentPlayer(player);
+  };
   
   // Handle game end
   const handleGameEnd = (winner: Player) => {
@@ -32,11 +38,17 @@ const SinglePlayer: React.FC = () => {
   
   // Reset the game and alternate who goes first
   const resetGame = () => {
-    // Toggle player assignment first
-    setHumanIsPlayer1(prev => !prev);
-    // Clear game result
+    // Clear game result immediately
     setGameResult(null);
+    
+    // Toggle player assignment
+    setHumanIsPlayer1(prev => !prev);
+    
+    // Reset all state variables including currentPlayer
+    setCurrentPlayer(1); // Always reset to Player 1
+    
     // Increment reset trigger to force board reset
+    // Do this last to ensure all state variables are updated before board resets
     setResetTrigger(prev => prev + 1);
   };
   
@@ -60,6 +72,7 @@ const SinglePlayer: React.FC = () => {
       <Box className="board mb-6">
         <GameState 
           onGameEnd={handleGameEnd}
+          onTurnChange={handleTurnChange}
           resetTrigger={resetTrigger}
           aiPlayer={aiPlayer}
           aiDelay={700} // Slightly longer delay for more natural feel
