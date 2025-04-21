@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, Text } from 'zmp-ui';
 import GameState from '../components/gameState';
 
@@ -6,7 +6,6 @@ const SinglePlayer: React.FC = () => {
   const [resetTrigger, setResetTrigger] = useState<number>(0);
   const [gameResult, setGameResult] = useState<string | null>(null);
   const [aiStarts, setAiStarts] = useState<boolean>(false);
-  const gameStateRef = useRef<HTMLDivElement>(null) as React.MutableRefObject<HTMLDivElement>;
   
   // Handle player turn end
   const handleTurnEnd = (currentPlayer: 1 | 2) => {
@@ -14,24 +13,30 @@ const SinglePlayer: React.FC = () => {
     if ((aiStarts && currentPlayer === 1) || (!aiStarts && currentPlayer === 2)) {
       // Delay AI move to make it feel more natural
       setTimeout(() => {
-        if (gameStateRef.current) {
+        // Get the game state component directly by data-testid
+        const gameStateElement = document.querySelector('[data-testid="game-state"]');
+        if (gameStateElement) {
           const aiMoveEvent = new CustomEvent('ai-make-move');
-          gameStateRef.current.dispatchEvent(aiMoveEvent);
+          gameStateElement.dispatchEvent(aiMoveEvent);
         }
       }, 500);
     }
   };
   
-  // Setup initial game state
+  // Setup initial game state and handle AI first move
   useEffect(() => {
+    // Clear any previous result when game resets
+    setGameResult(null);
+    
     // If AI starts, trigger AI move after a slight delay
     if (aiStarts) {
       setTimeout(() => {
-        if (gameStateRef.current) {
+        const gameStateElement = document.querySelector('[data-testid="game-state"]');
+        if (gameStateElement) {
           const aiMoveEvent = new CustomEvent('ai-make-move');
-          gameStateRef.current.dispatchEvent(aiMoveEvent);
+          gameStateElement.dispatchEvent(aiMoveEvent);
         }
-      }, 500);
+      }, 800); // Slightly longer delay for initial move
     }
   }, [resetTrigger, aiStarts]);
   
@@ -52,10 +57,12 @@ const SinglePlayer: React.FC = () => {
   
   // Reset the game
   const resetGame = () => {
-    // Flip who starts first
-    setAiStarts(prev => !prev);
+    // Clear the result before changing who starts first
     setGameResult(null);
+    // Increment reset trigger to force board reset
     setResetTrigger(prev => prev + 1);
+    // Change who starts first
+    setAiStarts(prev => !prev);
   };
   
   return (
@@ -66,7 +73,7 @@ const SinglePlayer: React.FC = () => {
         {aiStarts ? "AI goes first (Yellow)" : "You go first (Red)"}
       </Text>
       
-      <Box className="board mb-6" ref={gameStateRef}>
+      <Box className="board mb-6">
         <GameState 
           onGameEnd={handleGameEnd}
           onTurnEnd={handleTurnEnd} 
