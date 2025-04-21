@@ -2,34 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text } from 'zmp-ui';
 
 // Define types for our game board
-type Player = 1 | 2 | null;
-type BoardState = Player[][];
+export type Player = 1 | 2 | null;
+export type BoardState = Player[][];
 
-interface GameStateProps {
+export interface GameStateProps {
   onGameEnd?: (winner: Player) => void;
-  onTurnEnd?: (currentPlayer: 1 | 2) => void;
+  onTurnChange?: (currentPlayer: Player) => void;
   resetTrigger?: number;
-  aiPlayer?: 1 | 2;  // Which player number is the AI
+  aiPlayer?: Player | null;  // Which player number is the AI (null for 2 human players)
+  aiDelay?: number; // Delay before AI makes a move in ms
   'data-testid'?: string;
 }
 
 const GameState: React.FC<GameStateProps> = ({ 
   onGameEnd, 
-  onTurnEnd,
+  onTurnChange,
   resetTrigger = 0, 
-  aiPlayer = 2,
+  aiPlayer = null,
+  aiDelay = 500,
   'data-testid': dataTestId
 }) => {
   const ROWS = 6;
   const COLS = 7;
-  const gameRef = useRef<HTMLDivElement>(null);
   
   // Initialize empty board
   const createEmptyBoard = (): BoardState => 
     Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
   
   const [board, setBoard] = useState<BoardState>(createEmptyBoard());
-  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
+  const [currentPlayer, setCurrentPlayer] = useState<Player>(1);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [winner, setWinner] = useState<Player>(null);
   
@@ -41,36 +42,28 @@ const GameState: React.FC<GameStateProps> = ({
     setWinner(null);
   }, [resetTrigger]);
   
-  // AI move handler
+  // Handle AI turn
   useEffect(() => {
-    const handleAiMove = () => {
-      if (gameOver) return;
-      
-      // Make AI move
-      const availableCols = findAvailableColumns(board);
-      if (availableCols.length > 0) {
-        // Choose a column with basic strategy:
-        // 1. If AI can win, make that move
-        // 2. If player can win next turn, block that move
-        // 3. Otherwise make a random move
-        
-        let bestCol = getBestMove(board, currentPlayer);
+    // Only trigger AI move when:
+    // 1. Game is not over
+    // 2. Current player is the AI player
+    // 3. AI player is defined
+    if (!gameOver && currentPlayer === aiPlayer && aiPlayer !== null) {
+      const timeoutId = setTimeout(() => {
+        const bestCol = getBestMove(board, currentPlayer);
         dropDisc(bestCol);
-      }
-    };
-    
-    // Add event listener for AI moves
-    const currentRef = gameRef.current;
-    if (currentRef) {
-      currentRef.addEventListener('ai-make-move', handleAiMove);
+      }, aiDelay);
       
-      return () => {
-        currentRef.removeEventListener('ai-make-move', handleAiMove);
-      };
+      return () => clearTimeout(timeoutId);
     }
-    
-    return undefined;
-  }, [board, currentPlayer, gameOver]);
+  }, [currentPlayer, gameOver, aiPlayer, board]);
+  
+  // Notify parent about turn change
+  useEffect(() => {
+    if (onTurnChange && !gameOver) {
+      onTurnChange(currentPlayer);
+    }
+  }, [currentPlayer, gameOver, onTurnChange]);
   
   // Find all available columns
   const findAvailableColumns = (board: BoardState): number[] => {
@@ -86,8 +79,20 @@ const GameState: React.FC<GameStateProps> = ({
     return availableCols;
   };
   
+  // Get next empty row in a column
+  const getNextEmptyRow = (board: BoardState, col: number): number => {
+    for (let row = ROWS - 1; row >= 0; row--) {
+      if (board[row][col] === null) {
+        return row;
+      }
+    }
+    return -1; // Column is full
+  };
+  
   // Get best move for AI with basic strategy
-  const getBestMove = (board: BoardState, player: 1 | 2): number => {
+  const getBestMove = (board: BoardState, player: Player): number => {
+    if (player === null) return 0; // Safety check
+    
     const availableCols = findAvailableColumns(board);
     const opponent = player === 1 ? 2 : 1;
     
@@ -122,16 +127,6 @@ const GameState: React.FC<GameStateProps> = ({
     
     // Otherwise make a random move
     return availableCols[Math.floor(Math.random() * availableCols.length)];
-  };
-  
-  // Get next empty row in a column
-  const getNextEmptyRow = (board: BoardState, col: number): number => {
-    for (let row = ROWS - 1; row >= 0; row--) {
-      if (board[row][col] === null) {
-        return row;
-      }
-    }
-    return -1; // Column is full
   };
   
   // Check for winner
@@ -192,49 +187,54 @@ const GameState: React.FC<GameStateProps> = ({
       }
     }
     
-    // Check if board is full (draw)
-    const isFull = board.every(row => row.every(cell => cell !== null));
-    if (isFull) {
-      return null; // Draw
-    }
-    
-    return null; // No winner yet
+    // No winner found
+    return null;
   };
   
   // Check if there's a winner after each move
   useEffect(() => {
     const gameWinner = checkForWinner(board);
+    const isFull = board.every(row => row.every(cell => cell !== null));
     
-    if (gameWinner !== null || board.every(row => row.every(cell => cell !== null))) {
+    if (gameWinner !== null || isFull) {
       setGameOver(true);
       setWinner(gameWinner);
       if (onGameEnd) {
         onGameEnd(gameWinner);
       }
-    } else if (onTurnEnd && currentPlayer) {
-      // If the game continues, notify about the turn end
-      onTurnEnd(currentPlayer);
     }
-  }, [board, onGameEnd, onTurnEnd, currentPlayer]);
+  }, [board, onGameEnd]);
   
   // Make a move in the selected column
   const dropDisc = (col: number) => {
     if (gameOver) return;
     
     // Find the first empty cell from bottom to top
-    for (let row = ROWS - 1; row >= 0; row--) {
-      if (board[row][col] === null) {
-        const newBoard = [...board.map(row => [...row])];
-        newBoard[row][col] = currentPlayer;
-        setBoard(newBoard);
-        setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-        return;
-      }
+    const row = getNextEmptyRow(board, col);
+    if (row !== -1) {
+      const newBoard = [...board.map(row => [...row])];
+      newBoard[row][col] = currentPlayer;
+      setBoard(newBoard);
+      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
     }
   };
   
+  // Check if player can make a move or if it's AI's turn
+  const canMakeMove = (col: number): boolean => {
+    // Column must not be full
+    if (getNextEmptyRow(board, col) === -1) return false;
+    
+    // If it's the AI's turn, human should not make a move
+    if (currentPlayer === aiPlayer) return false;
+    
+    // Game must not be over
+    if (gameOver) return false;
+    
+    return true;
+  };
+  
   return (
-    <Box ref={gameRef as React.MutableRefObject<HTMLDivElement>} data-testid={dataTestId} className="flex flex-col items-center">
+    <Box data-testid={dataTestId} className="flex flex-col items-center">
       {/* Game status */}
       <Text size="large" className="mb-4 font-bold">
         {gameOver 
@@ -253,8 +253,7 @@ const GameState: React.FC<GameStateProps> = ({
                 key={`${rowIndex}-${colIndex}`}
                 className="w-10 h-10 bg-blue-800 m-1 rounded-full flex items-center justify-center cursor-pointer"
                 onClick={() => {
-                  // Only allow human player to click
-                  if (currentPlayer !== aiPlayer) {
+                  if (canMakeMove(colIndex)) {
                     dropDisc(colIndex);
                   }
                 }}

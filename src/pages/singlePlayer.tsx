@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Text } from 'zmp-ui';
-import GameState from '../components/gameState';
+import GameState, { Player } from '../components/gameState';
 
 const SinglePlayer: React.FC = () => {
   // Game state
@@ -12,46 +12,11 @@ const SinglePlayer: React.FC = () => {
   // When humanIsPlayer1 is false: AI is red (Player 1), Human is yellow (Player 2)
   const [humanIsPlayer1, setHumanIsPlayer1] = useState<boolean>(true);
   
-  // Calculate which player number the AI controls (1 or 2)
-  const aiPlayer = humanIsPlayer1 ? 2 : 1;
-  
-  // Handle turn end event
-  const handleTurnEnd = (currentPlayer: 1 | 2) => {
-    // If it's AI's turn, trigger the AI move
-    if (currentPlayer === aiPlayer) {
-      // Delay AI move to make it feel more natural
-      setTimeout(() => {
-        // Get the game state component and dispatch AI move event
-        const gameStateElement = document.querySelector('[data-testid="game-state"]');
-        if (gameStateElement) {
-          const aiMoveEvent = new CustomEvent('ai-make-move');
-          gameStateElement.dispatchEvent(aiMoveEvent);
-        }
-      }, 500);
-    }
-  };
-  
-  // Trigger AI first move if AI starts
-  useEffect(() => {
-    // Clear any previous result
-    setGameResult(null);
-    
-    // If AI is Player 1 (red), it needs to go first
-    if (aiPlayer === 1) {
-      const timer = setTimeout(() => {
-        const gameStateElement = document.querySelector('[data-testid="game-state"]');
-        if (gameStateElement) {
-          const aiMoveEvent = new CustomEvent('ai-make-move');
-          gameStateElement.dispatchEvent(aiMoveEvent);
-        }
-      }, 1000); // Ensure board is fully initialized
-      
-      return () => clearTimeout(timer);
-    }
-  }, [resetTrigger, aiPlayer]);
+  // Calculate which player number the AI controls (1 or 2 or null for two human players)
+  const aiPlayer: Player = humanIsPlayer1 ? 2 : 1;
   
   // Handle game end
-  const handleGameEnd = (winner: 1 | 2 | null) => {
+  const handleGameEnd = (winner: Player) => {
     let resultMessage;
     
     if (winner === null) {
@@ -95,9 +60,9 @@ const SinglePlayer: React.FC = () => {
       <Box className="board mb-6">
         <GameState 
           onGameEnd={handleGameEnd}
-          onTurnEnd={handleTurnEnd} 
           resetTrigger={resetTrigger}
           aiPlayer={aiPlayer}
+          aiDelay={700} // Slightly longer delay for more natural feel
           data-testid="game-state"
         />
       </Box>
