@@ -22,7 +22,7 @@ const GameState: React.FC<GameStateProps> = ({
 }) => {
   const ROWS = 6;
   const COLS = 7;
-  const gameRef = useRef<HTMLDivElement>(document.createElement('div')) as React.MutableRefObject<HTMLDivElement>;
+  const gameRef = useRef<HTMLDivElement>(null);
   
   // Initialize empty board
   const createEmptyBoard = (): BoardState => 
@@ -41,17 +41,21 @@ const GameState: React.FC<GameStateProps> = ({
     setWinner(null);
   }, [resetTrigger]);
   
-  // AI move handler - this will be called when a custom event is dispatched
+  // AI move handler
   useEffect(() => {
     const handleAiMove = () => {
-      if (gameOver || currentPlayer !== aiPlayer) return;
+      if (gameOver) return;
       
       // Make AI move
       const availableCols = findAvailableColumns(board);
       if (availableCols.length > 0) {
-        // Choose a column with basic strategy
+        // Choose a column with basic strategy:
+        // 1. If AI can win, make that move
+        // 2. If player can win next turn, block that move
+        // 3. Otherwise make a random move
+        
         let bestCol = getBestMove(board, currentPlayer);
-        makeMove(bestCol);
+        dropDisc(bestCol);
       }
     };
     
@@ -66,7 +70,7 @@ const GameState: React.FC<GameStateProps> = ({
     }
     
     return undefined;
-  }, [board, currentPlayer, gameOver, aiPlayer]);
+  }, [board, currentPlayer, gameOver]);
   
   // Find all available columns
   const findAvailableColumns = (board: BoardState): number[] => {
@@ -200,39 +204,37 @@ const GameState: React.FC<GameStateProps> = ({
   // Check if there's a winner after each move
   useEffect(() => {
     const gameWinner = checkForWinner(board);
-    const isBoardFull = board.every(row => row.every(cell => cell !== null));
     
-    if (gameWinner !== null || isBoardFull) {
+    if (gameWinner !== null || board.every(row => row.every(cell => cell !== null))) {
       setGameOver(true);
       setWinner(gameWinner);
       if (onGameEnd) {
         onGameEnd(gameWinner);
       }
-    } else if (onTurnEnd && !gameOver) {
-      // If the game continues, notify about the turn change
+    } else if (onTurnEnd && currentPlayer) {
+      // If the game continues, notify about the turn end
       onTurnEnd(currentPlayer);
     }
-  }, [board, onGameEnd, onTurnEnd, currentPlayer, gameOver]);
+  }, [board, onGameEnd, onTurnEnd, currentPlayer]);
   
   // Make a move in the selected column
-  const makeMove = (col: number) => {
+  const dropDisc = (col: number) => {
     if (gameOver) return;
     
     // Find the first empty cell from bottom to top
     for (let row = ROWS - 1; row >= 0; row--) {
       if (board[row][col] === null) {
-        const newBoard = board.map(r => [...r]);
+        const newBoard = [...board.map(row => [...row])];
         newBoard[row][col] = currentPlayer;
         setBoard(newBoard);
         setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-        return true;
+        return;
       }
     }
-    return false;
   };
   
   return (
-    <Box ref={gameRef} data-testid={dataTestId} className="flex flex-col items-center">
+    <Box ref={gameRef as React.MutableRefObject<HTMLDivElement>} data-testid={dataTestId} className="flex flex-col items-center">
       {/* Game status */}
       <Text size="large" className="mb-4 font-bold">
         {gameOver 
@@ -252,8 +254,8 @@ const GameState: React.FC<GameStateProps> = ({
                 className="w-10 h-10 bg-blue-800 m-1 rounded-full flex items-center justify-center cursor-pointer"
                 onClick={() => {
                   // Only allow human player to click
-                  if (!gameOver && currentPlayer !== aiPlayer) {
-                    makeMove(colIndex);
+                  if (currentPlayer !== aiPlayer) {
+                    dropDisc(colIndex);
                   }
                 }}
               >

@@ -11,6 +11,12 @@ export default () => {
     build: {
       assetsInlineLimit: 0,
     },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './setupTests.ts', // Adjusted to match the root
+      include: ['**/*.test.{js,jsx,ts,tsx}'], // Match test files in all subdirectories
+    },
     resolve: {
       alias: {
         "@": "/src",
