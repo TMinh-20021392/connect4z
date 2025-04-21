@@ -8,7 +8,9 @@ import {
 } from "zmp-ui";
 import { AppProps } from "zmp-ui/app";
 
-import HomePage from "@/pages/index";
+import MenuPage from "@/pages/menuPage";
+import SinglePlayerGame from "@/pages/singlePlayer";
+import HowToPlay from "@/pages/howToPlay";
 
 const Layout = () => {
   return (
@@ -16,11 +18,14 @@ const Layout = () => {
       <SnackbarProvider>
         <ZMPRouter>
           <AnimationRoutes>
-            <Route path="/" element={<HomePage />}></Route>
+            <Route path="/" element={<MenuPage />}></Route>
+            <Route path="/single-player" element={<SinglePlayerGame />}></Route>
+            <Route path="/how-to-play" element={<HowToPlay />}></Route>
           </AnimationRoutes>
         </ZMPRouter>
       </SnackbarProvider>
     </App>
   );
 };
+
 export default Layout;
