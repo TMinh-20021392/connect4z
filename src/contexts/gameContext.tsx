@@ -121,7 +121,7 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return -1; // Column is full
   };
   
-  // Check for a winner
+  // Check for a winner - FIXED ALGORITHM
   const checkForWinner = (board: BoardState, row: number, col: number, player: Player): boolean => {
     if (player === null) return false;
     
@@ -147,36 +147,32 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       }
     }
     
-    // Diagonal (down-right) check
-    count = 0;
-    let startRow = row - Math.min(row, col);
-    let startCol = col - Math.min(row, col);
-    
-    while (startRow < ROWS && startCol < COLS) {
-      if (board[startRow][startCol] === player) {
-        count++;
-        if (count >= 4) return true;
-      } else {
-        count = 0;
+    // Diagonal (down-right) check - FIXED
+    for (let r = 0; r <= ROWS - 4; r++) {
+      for (let c = 0; c <= COLS - 4; c++) {
+        if (
+          board[r][c] === player &&
+          board[r+1][c+1] === player &&
+          board[r+2][c+2] === player &&
+          board[r+3][c+3] === player
+        ) {
+          return true;
+        }
       }
-      startRow++;
-      startCol++;
     }
     
-    // Diagonal (up-right) check
-    count = 0;
-    startRow = row + Math.min(ROWS - 1 - row, col);
-    startCol = col - Math.min(ROWS - 1 - row, col);
-    
-    while (startRow >= 0 && startCol < COLS) {
-      if (board[startRow][startCol] === player) {
-        count++;
-        if (count >= 4) return true;
-      } else {
-        count = 0;
+    // Diagonal (up-right) check - FIXED
+    for (let r = 3; r < ROWS; r++) {
+      for (let c = 0; c <= COLS - 4; c++) {
+        if (
+          board[r][c] === player &&
+          board[r-1][c+1] === player &&
+          board[r-2][c+2] === player &&
+          board[r-3][c+3] === player
+        ) {
+          return true;
+        }
       }
-      startRow--;
-      startCol++;
     }
     
     return false;
@@ -201,14 +197,18 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // Make the move
     dispatch({ type: 'MAKE_MOVE', col, row });
     
+    // Create a new board with the move to check win conditions
+    const newBoard = gameState.board.map(r => [...r]);
+    newBoard[row][col] = gameState.currentPlayer;
+    
     // Check if this move resulted in a win
-    if (checkForWinner(gameState.board, row, col, gameState.currentPlayer)) {
+    if (checkForWinner(newBoard, row, col, gameState.currentPlayer)) {
       dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
       return;
     }
     
     // Check for draw
-    if (isBoardFull(gameState.board)) {
+    if (isBoardFull(newBoard)) {
       dispatch({ type: 'SET_DRAW' });
       return;
     }
@@ -226,41 +226,47 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       gameState.currentPlayer !== gameState.humanPlayerNumber &&
       !gameState.isAIThinking
     ) {
+      // Set AI thinking flag
       dispatch({ type: 'TOGGLE_AI_THINKING' });
       
       const aiMoveTimeout = setTimeout(() => {
-        const aiMove = getBestMove(gameState.board, gameState.currentPlayer);
-        if (aiMove !== null) {
-          const row = getNextEmptyRow(gameState.board, aiMove);
-          
-          if (row !== -1) {
-            const newBoard = gameState.board.map(r => [...r]);
-            newBoard[row][aiMove] = gameState.currentPlayer;
+        try {
+          // Get AI move
+          const aiMove = getBestMove(gameState.board, gameState.currentPlayer);
+          if (aiMove !== null) {
+            const row = getNextEmptyRow(gameState.board, aiMove);
             
-            // Make AI move
-            dispatch({ type: 'MAKE_MOVE', col: aiMove, row });
-            
-            // Check if AI won
-            if (checkForWinner(newBoard, row, aiMove, gameState.currentPlayer)) {
-              dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
-            } 
-            // Check for draw
-            else if (isBoardFull(newBoard)) {
-              dispatch({ type: 'SET_DRAW' });
-            } 
-            // Switch to human player
-            else {
-              dispatch({ type: 'SWITCH_PLAYER' });
+            if (row !== -1) {
+              // Create a temporary board to check win condition
+              const tempBoard = gameState.board.map(r => [...r]);
+              tempBoard[row][aiMove] = gameState.currentPlayer;
+              
+              // Make AI move
+              dispatch({ type: 'MAKE_MOVE', col: aiMove, row });
+              
+              // Check if AI won
+              if (checkForWinner(tempBoard, row, aiMove, gameState.currentPlayer)) {
+                dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
+              } 
+              // Check for draw
+              else if (isBoardFull(tempBoard)) {
+                dispatch({ type: 'SET_DRAW' });
+              } 
+              // Switch to human player
+              else {
+                dispatch({ type: 'SWITCH_PLAYER' });
+              }
             }
           }
+        } finally {
+          // Always toggle AI thinking off
+          dispatch({ type: 'TOGGLE_AI_THINKING' });
         }
-        
-        dispatch({ type: 'TOGGLE_AI_THINKING' });
-      }, 750); // AI "thinking" time
+      }, 0); // AI "thinking" time
       
       return () => clearTimeout(aiMoveTimeout);
     }
-  }, [gameState.currentPlayer, gameState.isGameOver, gameState.humanPlayerNumber, gameMode, gameState.isAIThinking]);
+  }, [gameState.currentPlayer, gameState.isGameOver, gameState.humanPlayerNumber, gameMode, gameState.isAIThinking, gameState.board]);
   
   // AI logic - Find available columns
   const findAvailableColumns = (board: BoardState): number[] => {
