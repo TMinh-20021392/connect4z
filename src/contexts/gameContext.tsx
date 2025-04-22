@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useReducer, useEffect } from 'react';
+import { calculateAIMove, getNextEmptyRow } from '../services/aiService';
 
 // Define types for our game
 export type Player = 1 | 2 | null;
@@ -106,97 +107,72 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+// Check for a winner
+const checkForWinner = (board: BoardState, row: number, col: number, player: Player): boolean => {
+  if (player === null) return false;
+  
+  // Horizontal check
+  let count = 0;
+  for (let c = 0; c < COLS; c++) {
+    if (board[row][c] === player) {
+      count++;
+      if (count >= 4) return true;
+    } else {
+      count = 0;
+    }
+  }
+  
+  // Vertical check
+  count = 0;
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][col] === player) {
+      count++;
+      if (count >= 4) return true;
+    } else {
+      count = 0;
+    }
+  }
+  
+  // Diagonal (down-right) check
+  for (let r = 0; r <= ROWS - 4; r++) {
+    for (let c = 0; c <= COLS - 4; c++) {
+      if (
+        board[r][c] === player &&
+        board[r+1][c+1] === player &&
+        board[r+2][c+2] === player &&
+        board[r+3][c+3] === player
+      ) {
+        return true;
+      }
+    }
+  }
+  
+  // Diagonal (up-right) check
+  for (let r = 3; r < ROWS; r++) {
+    for (let c = 0; c <= COLS - 4; c++) {
+      if (
+        board[r][c] === player &&
+        board[r-1][c+1] === player &&
+        board[r-2][c+2] === player &&
+        board[r-3][c+3] === player
+      ) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+};
+
+// Check if the board is full (draw)
+const isBoardFull = (board: BoardState): boolean => {
+  return board[0].every(cell => cell !== null);
+};
+
 // Provider component
 export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [gameMode, setGameMode] = useState<GameMode>('single');
   const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
-  
-  // Get the next empty row in a column
-  const getNextEmptyRow = (board: BoardState, col: number): number => {
-    for (let row = ROWS - 1; row >= 0; row--) {
-      if (board[row][col] === null) {
-        return row;
-      }
-    }
-    return -1; // Column is full
-  };
-  
-  // Check for a winner - FIXED ALGORITHM
-  const checkForWinner = (board: BoardState, row: number, col: number, player: Player): boolean => {
-    if (player === null) return false;
-    
-    // Horizontal check
-    let count = 0;
-    for (let c = 0; c < COLS; c++) {
-      if (board[row][c] === player) {
-        count++;
-        if (count >= 4) return true;
-      } else {
-        count = 0;
-      }
-    }
-    
-    // Vertical check
-    count = 0;
-    for (let r = 0; r < ROWS; r++) {
-      if (board[r][col] === player) {
-        count++;
-        if (count >= 4) return true;
-      } else {
-        count = 0;
-      }
-    }
-    
-    // Diagonal (down-right) check - FIXED
-    for (let r = 0; r <= ROWS - 4; r++) {
-      for (let c = 0; c <= COLS - 4; c++) {
-        if (
-          board[r][c] === player &&
-          board[r+1][c+1] === player &&
-          board[r+2][c+2] === player &&
-          board[r+3][c+3] === player
-        ) {
-          return true;
-        }
-      }
-    }
-    
-    // Diagonal (up-right) check - FIXED
-    for (let r = 3; r < ROWS; r++) {
-      for (let c = 0; c <= COLS - 4; c++) {
-        if (
-          board[r][c] === player &&
-          board[r-1][c+1] === player &&
-          board[r-2][c+2] === player &&
-          board[r-3][c+3] === player
-        ) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
-  
-  // Check if the board is full (draw)
-  const isBoardFull = (board: BoardState): boolean => {
-    return board[0].every(cell => cell !== null);
-  };
-  
-  // Simple function to find any available column - guaranteed to return a value if any column is available
-  const findRandomAvailableColumn = (board: BoardState): number | null => {
-    const availableCols: number[] = [];
-    for (let c = 0; c < COLS; c++) {
-      if (board[0][c] === null) {
-        availableCols.push(c);
-      }
-    }
-    
-    if (availableCols.length === 0) return null;
-    
-    // Return random available column
-    return availableCols[Math.floor(Math.random() * availableCols.length)];
-  };
   
   // Make a move
   const makeMove = (col: number) => {
@@ -232,7 +208,7 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     dispatch({ type: 'SWITCH_PLAYER' });
   };
   
-  // Handle AI move - SIMPLIFIED
+  // Handle AI move
   useEffect(() => {
     // Only trigger in single player mode, when it's AI's turn, and game isn't over
     if (
@@ -244,10 +220,10 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       // Set AI thinking flag
       dispatch({ type: 'TOGGLE_AI_THINKING' });
       
-      // Use a very short timeout (100ms) to make it appear as AI thinking but still be quick
+      // Use a very short timeout to make it appear as AI thinking but still be quick
       setTimeout(() => {
-        // Get a random valid move
-        const aiCol = findRandomAvailableColumn(gameState.board);
+        // Get AI's move from our AI service
+        const aiCol = calculateAIMove(gameState.board);
         
         if (aiCol !== null) {
           const row = getNextEmptyRow(gameState.board, aiCol);
