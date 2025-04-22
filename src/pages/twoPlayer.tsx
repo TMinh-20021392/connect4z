@@ -24,6 +24,7 @@ const TwoPlayer: React.FC = () => {
   };
   
   const returnToMenu = () => {
+    resetGame();
     navigate('/');
   };
   

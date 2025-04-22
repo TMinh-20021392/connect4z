@@ -36,6 +36,7 @@ const SinglePlayer: React.FC = () => {
   };
   
   const returnToMenu = () => {
+    resetGame();
     navigate('/');
   };
   
