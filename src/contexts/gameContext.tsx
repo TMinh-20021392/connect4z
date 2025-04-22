@@ -183,6 +183,21 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return board[0].every(cell => cell !== null);
   };
   
+  // Simple function to find any available column - guaranteed to return a value if any column is available
+  const findRandomAvailableColumn = (board: BoardState): number | null => {
+    const availableCols: number[] = [];
+    for (let c = 0; c < COLS; c++) {
+      if (board[0][c] === null) {
+        availableCols.push(c);
+      }
+    }
+    
+    if (availableCols.length === 0) return null;
+    
+    // Return random available column
+    return availableCols[Math.floor(Math.random() * availableCols.length)];
+  };
+  
   // Make a move
   const makeMove = (col: number) => {
     // Ignore if game is over or AI is thinking
@@ -217,7 +232,7 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     dispatch({ type: 'SWITCH_PLAYER' });
   };
   
-  // Handle AI move
+  // Handle AI move - SIMPLIFIED
   useEffect(() => {
     // Only trigger in single player mode, when it's AI's turn, and game isn't over
     if (
@@ -229,99 +244,42 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       // Set AI thinking flag
       dispatch({ type: 'TOGGLE_AI_THINKING' });
       
-      const aiMoveTimeout = setTimeout(() => {
-        try {
-          // Get AI move
-          const aiMove = getBestMove(gameState.board, gameState.currentPlayer);
-          if (aiMove !== null) {
-            const row = getNextEmptyRow(gameState.board, aiMove);
+      // Use a very short timeout (100ms) to make it appear as AI thinking but still be quick
+      setTimeout(() => {
+        // Get a random valid move
+        const aiCol = findRandomAvailableColumn(gameState.board);
+        
+        if (aiCol !== null) {
+          const row = getNextEmptyRow(gameState.board, aiCol);
+          
+          if (row !== -1) {
+            // Make the move
+            dispatch({ type: 'MAKE_MOVE', col: aiCol, row });
             
-            if (row !== -1) {
-              // Create a temporary board to check win condition
-              const tempBoard = gameState.board.map(r => [...r]);
-              tempBoard[row][aiMove] = gameState.currentPlayer;
-              
-              // Make AI move
-              dispatch({ type: 'MAKE_MOVE', col: aiMove, row });
-              
-              // Check if AI won
-              if (checkForWinner(tempBoard, row, aiMove, gameState.currentPlayer)) {
-                dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
-              } 
-              // Check for draw
-              else if (isBoardFull(tempBoard)) {
-                dispatch({ type: 'SET_DRAW' });
-              } 
-              // Switch to human player
-              else {
-                dispatch({ type: 'SWITCH_PLAYER' });
-              }
+            // Create a temporary board to check game state
+            const tempBoard = gameState.board.map(r => [...r]);
+            tempBoard[row][aiCol] = gameState.currentPlayer;
+            
+            // Check win condition
+            if (checkForWinner(tempBoard, row, aiCol, gameState.currentPlayer)) {
+              dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
+            }
+            // Check draw condition
+            else if (isBoardFull(tempBoard)) {
+              dispatch({ type: 'SET_DRAW' });
+            }
+            // Switch player
+            else {
+              dispatch({ type: 'SWITCH_PLAYER' });
             }
           }
-        } finally {
-          // Always toggle AI thinking off
-          dispatch({ type: 'TOGGLE_AI_THINKING' });
         }
-      }, 0); // AI "thinking" time
-      
-      return () => clearTimeout(aiMoveTimeout);
+        
+        // Turn off AI thinking flag
+        dispatch({ type: 'TOGGLE_AI_THINKING' });
+      }, 100);
     }
   }, [gameState.currentPlayer, gameState.isGameOver, gameState.humanPlayerNumber, gameMode, gameState.isAIThinking, gameState.board]);
-  
-  // AI logic - Find available columns
-  const findAvailableColumns = (board: BoardState): number[] => {
-    const availableCols: number[] = [];
-    
-    for (let c = 0; c < COLS; c++) {
-      if (board[0][c] === null) {
-        availableCols.push(c);
-      }
-    }
-    
-    return availableCols;
-  };
-  
-  // AI logic - Get best move
-  const getBestMove = (board: BoardState, player: Player): number | null => {
-    if (player === null) return null;
-    
-    const availableCols = findAvailableColumns(board);
-    if (availableCols.length === 0) return null;
-    
-    const opponent = player === 1 ? 2 : 1;
-    
-    // First check if AI can win in one move
-    for (const col of availableCols) {
-      const row = getNextEmptyRow(board, col);
-      if (row !== -1) {
-        const tempBoard = board.map(r => [...r]);
-        tempBoard[row][col] = player;
-        if (checkForWinner(tempBoard, row, col, player)) {
-          return col; // Winning move found
-        }
-      }
-    }
-    
-    // Check if opponent can win in one move (and block)
-    for (const col of availableCols) {
-      const row = getNextEmptyRow(board, col);
-      if (row !== -1) {
-        const tempBoard = board.map(r => [...r]);
-        tempBoard[row][col] = opponent;
-        if (checkForWinner(tempBoard, row, col, opponent)) {
-          return col; // Blocking move found
-        }
-      }
-    }
-    
-    // Prefer the center column
-    if (availableCols.includes(3)) {
-      return 3;
-    }
-    
-    // Otherwise, choose a random column from available ones
-    return availableCols[Math.floor(Math.random() * availableCols.length)];
-  };
   
   // Reset game function
   const resetGame = () => {
