@@ -1,85 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Box, Button, Text } from 'zmp-ui';
-import GameState from '../components/gameState';
+import GameBoard from '../components/gameBoard';
+import { useGame } from '../contexts/gameContext';
 
 const SinglePlayer: React.FC = () => {
-  const [resetTrigger, setResetTrigger] = useState<number>(0);
-  const [gameResult, setGameResult] = useState<string | null>(null);
-  const [aiTurn, setAiTurn] = useState<boolean>(false);
+  const { gameState, resetGame, setGameMode } = useGame();
+  const { isGameOver, winner, isDraw, humanPlayerNumber } = gameState;
   
-  // Handle AI turn
+  // Set game mode on component mount
   useEffect(() => {
-    if (aiTurn && !gameResult) {
-      // Simple timeout to simulate AI "thinking"
-      const aiTimeout = setTimeout(() => {
-        // AI makes a random move by simulating a click on a column
-        const aiMoveEvent = new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-        });
-        
-        // Get all column cells that are available (have at least one empty cell)
-        const boardElement = document.querySelector('.board');
-        if (boardElement) {
-          const topRow = boardElement.querySelectorAll('.flex:first-child > .cursor-pointer');
-          const availableCols = Array.from(topRow).filter(col => {
-            return col.querySelector('.bg-red-500, .bg-yellow-400') === null;
-          });
-          
-          if (availableCols.length > 0) {
-            // Choose random column from available ones
-            const randomCol = availableCols[Math.floor(Math.random() * availableCols.length)];
-            randomCol.dispatchEvent(aiMoveEvent);
-          }
-        }
-        
-        setAiTurn(false);
-      }, 1000);
-      
-      return () => clearTimeout(aiTimeout);
-    }
-    return undefined;
-  }, [aiTurn, gameResult]);
+    setGameMode('single');
+  }, [setGameMode]);
   
-  // Handle when a player's turn ends
-  const handleTurnEnd = (player: 1 | 2 | null) => {
-    if (player === 1) {
-      // After player 1's turn, it's AI's turn
-      setAiTurn(true);
+  const getGameResult = () => {
+    if (!isGameOver) return null;
+    
+    if (isDraw) {
+      return "It's a draw!";
     }
-  };
-  
-  // Handle game end
-  const handleGameEnd = (winner: 1 | 2 | null) => {
-    if (winner === 1) {
-      setGameResult("You win! Congratulations!");
-    } else if (winner === 2) {
-      setGameResult("AI wins! Better luck next time.");
+    
+    if (winner === humanPlayerNumber) {
+      return "You win! Congratulations!";
     } else {
-      setGameResult("It's a draw!");
+      return "AI wins! Better luck next time.";
     }
   };
   
-  // Reset the game
-  const resetGame = () => {
-    setResetTrigger(prev => prev + 1);
-    setGameResult(null);
+  const getPlayerInfo = () => {
+    if (humanPlayerNumber === 1) {
+      return "You are playing as Red (Player 1)";
+    } else {
+      return "You are playing as Yellow (Player 2)";
+    }
   };
   
   return (
     <Box className="flex flex-col items-center p-4">
-      <Text size="xLarge" className="font-bold mb-6">Single Player Mode</Text>
+      <Text size="xLarge" className="font-bold mb-2">Single Player Mode</Text>
+      <Text className="mb-4">{getPlayerInfo()}</Text>
       
       <Box className="board mb-6">
-        <GameState 
-          onGameEnd={handleGameEnd} 
-          resetTrigger={resetTrigger} 
-        />
+        <GameBoard data-testid="game-board" />
       </Box>
       
-      {gameResult && (
+      {isGameOver && (
         <Box className="text-center mb-6">
-          <Text size="large" className="font-bold">{gameResult}</Text>
+          <Text size="large" className="font-bold">{getGameResult()}</Text>
           <Button 
             variant="primary"
             className="mt-4"
