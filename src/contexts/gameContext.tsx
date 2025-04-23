@@ -91,16 +91,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         currentPlayer: state.currentPlayer === 1 ? 2 : 1,
       };
-    case 'RESET_GAME': {
-      // For single player mode, alternate who goes first
-      const humanPlayerNumber = action.alternateFirstPlayer 
-        ? (state.humanPlayerNumber === 1 ? 2 : 1)
-        : state.humanPlayerNumber;
-        
-      return {
-        ...initialGameState,
-        humanPlayerNumber,
-      };
+      case 'RESET_GAME': {
+        // For single player mode, alternate who goes first on reset
+        // Only if specified in the action
+        const humanPlayerNumber = action.alternateFirstPlayer 
+          ? (state.humanPlayerNumber === 1 ? 2 : 1)
+          : 1; // Default to human as player 1
+          
+        return {
+          ...initialGameState,
+          humanPlayerNumber,
+        };
+      
     }
     default:
       return state;
@@ -208,8 +210,13 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     dispatch({ type: 'SWITCH_PLAYER' });
   };
   
-  // Handle AI move
   useEffect(() => {
+    // Complete reset when changing game modes
+    dispatch({ type: 'RESET_GAME', alternateFirstPlayer: false });
+  }, [gameMode]);
+
+  // Handle AI move
+useEffect(() => {
     // Only trigger in single player mode, when it's AI's turn, and game isn't over
     if (
       gameMode === 'single' && 
@@ -222,31 +229,34 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       
       // Use a very short timeout to make it appear as AI thinking but still be quick
       setTimeout(() => {
-        // Get AI's move from our AI service
-        const aiCol = calculateAIMove(gameState.board);
-        
-        if (aiCol !== null) {
-          const row = getNextEmptyRow(gameState.board, aiCol);
+        // Make sure we're still in single player mode (in case user switched during timeout)
+        if (gameMode === 'single') {
+          // Get AI's move from our AI service
+          const aiCol = calculateAIMove(gameState.board);
           
-          if (row !== -1) {
-            // Make the move
-            dispatch({ type: 'MAKE_MOVE', col: aiCol, row });
+          if (aiCol !== null) {
+            const row = getNextEmptyRow(gameState.board, aiCol);
             
-            // Create a temporary board to check game state
-            const tempBoard = gameState.board.map(r => [...r]);
-            tempBoard[row][aiCol] = gameState.currentPlayer;
-            
-            // Check win condition
-            if (checkForWinner(tempBoard, row, aiCol, gameState.currentPlayer)) {
-              dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
-            }
-            // Check draw condition
-            else if (isBoardFull(tempBoard)) {
-              dispatch({ type: 'SET_DRAW' });
-            }
-            // Switch player
-            else {
-              dispatch({ type: 'SWITCH_PLAYER' });
+            if (row !== -1) {
+              // Make the move
+              dispatch({ type: 'MAKE_MOVE', col: aiCol, row });
+              
+              // Create a temporary board to check game state
+              const tempBoard = gameState.board.map(r => [...r]);
+              tempBoard[row][aiCol] = gameState.currentPlayer;
+              
+              // Check win condition
+              if (checkForWinner(tempBoard, row, aiCol, gameState.currentPlayer)) {
+                dispatch({ type: 'SET_WINNER', winner: gameState.currentPlayer });
+              }
+              // Check draw condition
+              else if (isBoardFull(tempBoard)) {
+                dispatch({ type: 'SET_DRAW' });
+              }
+              // Switch player
+              else {
+                dispatch({ type: 'SWITCH_PLAYER' });
+              }
             }
           }
         }
@@ -256,7 +266,7 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
       }, 100);
     }
   }, [gameState.currentPlayer, gameState.isGameOver, gameState.humanPlayerNumber, gameMode, gameState.isAIThinking, gameState.board]);
-  
+
   // Reset game function
   const resetGame = () => {
     // In single player mode, alternate who goes first on reset
