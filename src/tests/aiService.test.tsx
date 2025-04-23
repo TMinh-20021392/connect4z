@@ -17,12 +17,57 @@ describe('AI Service', () => {
     expect(getNextEmptyRow(board, 0)).toBe(-1);
   });
 
-  it('should block opponent\'s winning move', () => {
+  it('should block opponent\'s vertical winning move', () => { 
     const board = [...emptyBoard];
     board[5][0] = 1;
     board[4][0] = 1;
     board[3][0] = 1;
-    expect(calculateAIMove(board, 2)).toBe(0);
+    expect(calculateAIMove(board, 2)).toBe(0); // AI should block column 0
+  });
+
+  it('should block opponent\'s horizontal winning move', () => {
+    const board = [...emptyBoard];
+    board[5][0] = 1;
+    board[5][1] = 1;
+    board[5][2] = 1;
+    expect(calculateAIMove(board, 2)).toBe(3); // AI should block column 3
+  });
+
+  it('should block opponent\'s diagonal (bottom-left to top-right) winning move', () => {
+    const board = [...emptyBoard];
+    board[5][0] = 1;
+    board[4][1] = 1;
+    board[3][2] = 1;
+    expect(calculateAIMove(board, 2)).toBe(3); // AI should block column 3
+  });
+
+  it('should block opponent\'s diagonal (bottom-right to top-left) winning move', () => {
+    const board = [...emptyBoard];
+    board[5][3] = 1;
+    board[4][2] = 1;
+    board[3][1] = 1;
+    expect(calculateAIMove(board, 2)).toBe(0); // AI should block column 0
+  });
+
+  it('should block potential 3-in-a-row (horizontal with open ends)', () => {
+    const board = [...emptyBoard];
+    board[5][1] = 1;
+    board[5][2] = 1;
+    expect(calculateAIMove(board, 2)).toBe(0); // AI should block column 0 or 3
+  });
+
+  it('should block potential 3-in-a-row (vertical with open ends)', () => {
+    const board = [...emptyBoard];
+    board[5][0] = 1;
+    board[4][0] = 1;
+    expect(calculateAIMove(board, 2)).toBe(0); // AI should block column 0
+  });
+
+  it('should block potential diagonal (bottom-left to top-right)', () => {
+    const board = [...emptyBoard];
+    board[5][0] = 1;
+    board[4][1] = 1;
+    expect(calculateAIMove(board, 2)).toBe(3); // AI should block column 3
   });
 
   it('should prefer center columns', () => {

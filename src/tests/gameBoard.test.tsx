@@ -14,7 +14,7 @@ describe('GameBoard', () => {
     expect(screen.getAllByRole('button')).toHaveLength(42); // 6 rows x 7 columns
   });
 
-  it('should allow making a move', () => {
+  it('should allow making a move', async () => {
     render(
       <GameProvider>
         <GameBoard />
@@ -24,6 +24,8 @@ describe('GameBoard', () => {
     const firstColumn = screen.getAllByRole('button')[0];
     fireEvent.click(firstColumn);
 
-    expect(firstColumn.querySelector('.bg-red-500')).toBeInTheDocument();
+    // Wait for the DOM to update
+    const disc = await screen.findByRole('button', { name: /Column 1/i });
+    expect(disc.querySelector('.bg-red-500')).toBeInTheDocument();
   });
 });
