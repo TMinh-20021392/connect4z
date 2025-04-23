@@ -50,6 +50,10 @@ describe('GameContext', () => {
         it('should not allow moves in a full column', () => {
             const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
     
+            act(() => {
+                result.current.setGameMode('two-player');
+            });
+
             // Fill column 0
             act(() => {
                 for (let i = 0; i < 6; i++) {
@@ -88,7 +92,7 @@ describe('GameContext', () => {
             const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
             
             expect(result.current.gameState.turnCount).toBe(0);
-            
+
             act(() => {
                 result.current.makeMove(0);
             });
