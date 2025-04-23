@@ -209,7 +209,7 @@ export const GameProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // Switch player
     dispatch({ type: 'SWITCH_PLAYER' });
   };
-  
+
   useEffect(() => {
     // Complete reset when changing game modes
     dispatch({ type: 'RESET_GAME', alternateFirstPlayer: false });
@@ -232,7 +232,7 @@ useEffect(() => {
         // Make sure we're still in single player mode (in case user switched during timeout)
         if (gameMode === 'single') {
           // Get AI's move from our AI service
-          const aiCol = calculateAIMove(gameState.board);
+          const aiCol = calculateAIMove(gameState.board, gameState.currentPlayer);
           
           if (aiCol !== null) {
             const row = getNextEmptyRow(gameState.board, aiCol);
