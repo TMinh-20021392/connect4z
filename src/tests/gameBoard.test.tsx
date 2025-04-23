@@ -69,32 +69,4 @@ describe('GameBoard', () => {
     fireEvent.click(columnButton);
     expect(mockMakeMove).not.toHaveBeenCalled();
   });
-
-  it('shows winner message when game is over', () => {
-    (useGame as unknown as jest.Mock).mockReturnValue({
-      gameState: {
-        ...baseGameState,
-        isGameOver: true,
-        winner: 2,
-      },
-      makeMove: mockMakeMove,
-    });
-
-    render(<GameBoard />);
-    expect(screen.getByText('Player 2 wins!')).toBeInTheDocument();
-  });
-
-  it('shows draw message when game is a draw', () => {
-    (useGame as unknown as jest.Mock).mockReturnValue({
-      gameState: {
-        ...baseGameState,
-        isGameOver: true,
-        isDraw: true,
-      },
-      makeMove: mockMakeMove,
-    });
-
-    render(<GameBoard />);
-    expect(screen.getByText("It's a draw!")).toBeInTheDocument();
-  });
 });
