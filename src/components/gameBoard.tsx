@@ -1,4 +1,3 @@
-// src/components/GameBoard.tsx
 import React from 'react';
 import { Box, Text } from 'zmp-ui';
 import { useGame } from '../contexts/gameContext';
@@ -9,14 +8,9 @@ interface GameBoardProps {
 
 const GameBoard: React.FC<GameBoardProps> = ({ 'data-testid': dataTestId }) => {
   const { gameState, makeMove } = useGame();
-  const { board, currentPlayer, isGameOver, winner, isDraw, isAIThinking } = gameState;
+  const { board, currentPlayer, isGameOver, isAIThinking } = gameState;
   
   const getGameStatus = () => {
-    if (isGameOver) {
-      if (isDraw) return "It's a draw!";
-      if (winner) return `Player ${winner} wins!`;
-    }
-    
     if (isAIThinking) return "AI is thinking...";
     return `Player ${currentPlayer}'s turn`;
   };
