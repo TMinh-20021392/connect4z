@@ -53,40 +53,42 @@ const SinglePlayer: React.FC = () => {
         <Box>
           <GameBoard data-testid="game-board" />
         </Box>
-      </Box>
-      
-      {/* Game over section */}
-      {isGameOver && (
-        <Box className="text-center mt-6">
-          <Text size="large" className="font-bold mb-4">{getGameResult()}</Text>
-          <Box className="flex flex-col gap-2">
-            <Button 
-              variant="primary"
-              onClick={resetGame}
-            >
-              Play Again
-            </Button>
-            <Button 
-              variant="secondary"
-              onClick={returnToMenu}
-            >
-              Return to Menu
-            </Button>
+        
+        <Box className="h-24 flex flex-col items-center justify-center mt-6">
+          {isGameOver ? (
+            <Text size="large" className="font-bold mb-2">{getGameResult()}</Text>
+          ) : (
+            <Box className="h-8" />
+          )}
+          
+          {/* Button container - always the same height */}
+          <Box className="flex flex-col gap-2 w-full">
+            {isGameOver ? (
+              <>
+                <Button 
+                  variant="primary"
+                  onClick={resetGame}
+                >
+                  Play Again
+                </Button>
+                <Button 
+                  variant="secondary"
+                  onClick={returnToMenu}
+                >
+                  Return to Menu
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="secondary"
+                onClick={returnToMenu}
+              >
+                Return to Menu
+              </Button>
+            )}
           </Box>
         </Box>
-      )}
-      
-      {/* Return button when game is active */}
-      {!isGameOver && (
-        <Box className="text-center mt-6">
-          <Button 
-            variant="secondary"
-            onClick={returnToMenu}
-          >
-            Return to Menu
-          </Button>
-        </Box>
-      )}
+      </Box>
       
       {/* Bottom spacer for vertical centering */}
       <Box className="flex-grow" />
