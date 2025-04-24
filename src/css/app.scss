@@ -12,3 +12,22 @@
 .zaui-list-item {
   cursor: pointer;
 }
+
+@media screen and (max-height: 700px) {
+  .game-container {
+    padding-top: 2rem;
+  }
+  
+  .board-container {
+    transform: scale(0.9);
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* For very small screens */
+@media screen and (max-height: 600px) {
+  .board-container {
+    transform: scale(0.8);
+  }
+}

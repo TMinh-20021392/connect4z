@@ -41,16 +41,23 @@ const SinglePlayer: React.FC = () => {
   };
   
   return (
-    <Box className="flex flex-col items-center p-4">
-      <Text size="xLarge" className="font-bold mb-2">Single Player Mode</Text>
-      <Text className="mb-4">{getPlayerInfo()}</Text>
+    <Box className="flex flex-col items-center justify-center min-h-screen p-4">
+      {/* Top spacer for vertical centering */}
+      <Box className="flex-grow" />
       
-      <Box className="board mb-6">
-        <GameBoard data-testid="game-board" />
+      {/* Game content - will be centered vertically */}
+      <Box className="flex flex-col items-center">
+        <Text size="xLarge" className="font-bold text-center">Single Player Mode</Text>
+        <Text className="mb-1">{getPlayerInfo()}</Text>
+        
+        <Box>
+          <GameBoard data-testid="game-board" />
+        </Box>
       </Box>
       
+      {/* Game over section */}
       {isGameOver && (
-        <Box className="text-center mb-6">
+        <Box className="text-center mt-6">
           <Text size="large" className="font-bold mb-4">{getGameResult()}</Text>
           <Box className="flex flex-col gap-2">
             <Button 
@@ -69,8 +76,9 @@ const SinglePlayer: React.FC = () => {
         </Box>
       )}
       
+      {/* Return button when game is active */}
       {!isGameOver && (
-        <Box className="text-center mb-6 mt-4">
+        <Box className="text-center mt-6">
           <Button 
             variant="secondary"
             onClick={returnToMenu}
@@ -79,6 +87,9 @@ const SinglePlayer: React.FC = () => {
           </Button>
         </Box>
       )}
+      
+      {/* Bottom spacer for vertical centering */}
+      <Box className="flex-grow" />
     </Box>
   );
 };
