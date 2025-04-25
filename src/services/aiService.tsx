@@ -2,7 +2,7 @@ import { BoardState, Player } from '../contexts/gameContext';
 
 const ROWS = 6;
 const COLS = 7;
-const MAX_DEPTH = 5;
+const MAX_DEPTH = 10;
 
 export const getNextEmptyRow = (board: BoardState, col: number): number => {
   for (let row = ROWS - 1; row >= 0; row--) {
