@@ -25,6 +25,7 @@ describe('GameBoard', () => {
     winner: null,
     isDraw: false,
     isAIThinking: false,
+    winningCoordinates: null,
   };
 
   beforeEach(() => {
@@ -236,5 +237,191 @@ describe('GameBoard', () => {
     
     expect(redTokens).toHaveLength(4); // Player 1 (red)
     expect(yellowTokens).toHaveLength(2); // Player 2 (yellow)
+  });
+
+  // NEW TESTS FOR WINNING EFFECT
+  
+  it('applies winning animation styling to winning cells', () => {
+    const boardWithWin = createEmptyBoard();
+    // Create winning pattern for player 1 (horizontal)
+    boardWithWin[5][0] = 1;
+    boardWithWin[5][1] = 1;
+    boardWithWin[5][2] = 1;
+    boardWithWin[5][3] = 1;
+    
+    const winningCoordinates = [[5, 0], [5, 1], [5, 2], [5, 3]];
+    
+    (useGame as unknown as jest.Mock).mockReturnValue({
+      gameState: {
+        ...baseGameState,
+        board: boardWithWin,
+        winningCoordinates,
+        isGameOver: true,
+        winner: 1
+      },
+      makeMove: mockMakeMove,
+    });
+
+    render(<GameBoard data-testid="game-board" />);
+    
+    // Get board element and find winning cells with animation class
+    const board = screen.getByTestId('game-board');
+    
+    // With blinkState initially true, we should find the animation classes
+    const animatedCells = board.querySelectorAll('.animate-pulse');
+    expect(animatedCells).toHaveLength(4);
+    
+    // All animated cells should be Player 1's pieces
+    animatedCells.forEach(cell => {
+      const parentCell = cell.parentElement;
+      expect(parentCell?.querySelector('.bg-red-500')).not.toBeNull();
+    });
+  });
+  
+  it('establishes interval for blinking effect when winningCoordinates exist', () => {
+    vi.useFakeTimers();
+    const boardWithWin = createEmptyBoard();
+    // Create winning pattern
+    boardWithWin[5][0] = 1;
+    boardWithWin[5][1] = 1;
+    boardWithWin[5][2] = 1;
+    boardWithWin[5][3] = 1;
+    
+    const winningCoordinates = [[5, 0], [5, 1], [5, 2], [5, 3]];
+    
+    (useGame as unknown as jest.Mock).mockReturnValue({
+      gameState: {
+        ...baseGameState,
+        board: boardWithWin,
+        winningCoordinates,
+        isGameOver: true,
+        winner: 1
+      },
+      makeMove: mockMakeMove,
+    });
+
+    const { container } = render(<GameBoard data-testid="game-board" />);
+    
+    // Initial render should have animation classes
+    let animatedCells = container.querySelectorAll('.animate-pulse');
+    expect(animatedCells.length).toBe(4);
+    
+    // Advance timer to trigger blink state change
+    vi.advanceTimersByTime(500);
+    
+    // After the timer, we should have updated the blink state
+    // This is hard to test directly since we can't easily access component state
+    // But we can check if setInterval was called
+    expect(vi.getTimerCount()).toBe(1);
+    
+    vi.useRealTimers();
+  });
+  
+  it('does not apply animation to cells not part of winning combination', () => {
+    const boardWithMultiplePieces = createEmptyBoard();
+    // Create winning pattern and some other pieces
+    boardWithMultiplePieces[5][0] = 1;
+    boardWithMultiplePieces[5][1] = 1;
+    boardWithMultiplePieces[5][2] = 1;
+    boardWithMultiplePieces[5][3] = 1; // Part of winning combo
+    boardWithMultiplePieces[4][0] = 2;
+    boardWithMultiplePieces[4][1] = 2; // Not part of winning combo
+    
+    const winningCoordinates = [[5, 0], [5, 1], [5, 2], [5, 3]];
+    
+    (useGame as unknown as jest.Mock).mockReturnValue({
+      gameState: {
+        ...baseGameState,
+        board: boardWithMultiplePieces,
+        winningCoordinates,
+        isGameOver: true,
+        winner: 1
+      },
+      makeMove: mockMakeMove,
+    });
+
+    render(<GameBoard data-testid="game-board" />);
+    
+    // Get board element
+    const board = screen.getByTestId('game-board');
+    
+    // Count total pieces vs animated pieces
+    const allRedPieces = board.querySelectorAll('.bg-red-500');
+    const allYellowPieces = board.querySelectorAll('.bg-yellow-400');
+    const animatedPieces = board.querySelectorAll('.animate-pulse');
+    
+    expect(allRedPieces).toHaveLength(4); // 4 red pieces
+    expect(allYellowPieces).toHaveLength(2); // 2 yellow pieces
+    expect(animatedPieces).toHaveLength(4); // Only the 4 winning pieces should be animated
+  });
+  
+  it('cleans up interval on unmount', () => {
+    vi.useFakeTimers();
+    
+    const boardWithWin = createEmptyBoard();
+    boardWithWin[5][0] = 1;
+    boardWithWin[5][1] = 1;
+    boardWithWin[5][2] = 1;
+    boardWithWin[5][3] = 1;
+    
+    const winningCoordinates = [[5, 0], [5, 1], [5, 2], [5, 3]];
+    
+    (useGame as unknown as jest.Mock).mockReturnValue({
+      gameState: {
+        ...baseGameState,
+        board: boardWithWin,
+        winningCoordinates,
+        isGameOver: true,
+        winner: 1
+      },
+      makeMove: mockMakeMove,
+    });
+    
+    const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+    const { unmount } = render(<GameBoard data-testid="game-board" />);
+    
+    // Check that we have one timer running
+    expect(vi.getTimerCount()).toBe(1);
+    
+    // Unmount the component
+    unmount();
+    
+    // Verify clearInterval was called
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    
+    vi.useRealTimers();
+    clearIntervalSpy.mockRestore();
+  });
+  
+  it('correctly uses Event.preventDefault during cell click', () => {
+    render(<GameBoard data-testid="game-board" />);
+    
+    const columnCell = getCell(1);
+    const preventDefaultSpy = vi.fn();
+    
+    // Create a mock event object with preventDefault
+    const mockEvent = { preventDefault: preventDefaultSpy };
+    
+    // Trigger click with mock event
+    fireEvent.click(columnCell, mockEvent);
+    
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(mockMakeMove).toHaveBeenCalledWith(0);
+  });
+  
+  it('handles the case when winningCoordinates is null', () => {
+    (useGame as unknown as jest.Mock).mockReturnValue({
+      gameState: {
+        ...baseGameState,
+        winningCoordinates: null,
+      },
+      makeMove: mockMakeMove,
+    });
+
+    render(<GameBoard data-testid="game-board" />);
+    
+    // Game should render normally without errors
+    expect(screen.getByTestId('game-board')).toBeInTheDocument();
+    expect(screen.getByText("Player 1's turn")).toBeInTheDocument();
   });
 });
