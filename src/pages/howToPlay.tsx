@@ -1,9 +1,10 @@
 import React from 'react';
 import { Box, Text, Icon } from 'zmp-ui';
+import ReturnToMenuButton from '../components/returnToMenuButton';
 
 const HowToPlay: React.FC = () => {
   return (
-    <Box className="p-4">
+    <Box className="p-4 flex flex-col min-h-screen">
       <Text size="xLarge" className="font-bold mb-6 text-center">How to Play</Text>
       
       <Box className="bg-white rounded-lg p-4 shadow-md mb-6">
@@ -49,7 +50,7 @@ const HowToPlay: React.FC = () => {
         </Text>
       </Box>
       
-      <Box className="bg-white rounded-lg p-4 shadow-md">
+      <Box className="bg-white rounded-lg p-4 shadow-md mb-6">
         <Text size="large" className="font-bold mb-2">Tips</Text>
         <Box className="ml-4">
           <Box className="flex mb-2">
@@ -65,6 +66,10 @@ const HowToPlay: React.FC = () => {
             <Text>Look for opportunities to create "double threats" that force your opponent to block one line while you complete another.</Text>
           </Box>
         </Box>
+      </Box>
+
+      <Box className="mt-auto flex justify-center mb-6">
+        <ReturnToMenuButton />
       </Box>
     </Box>
   );

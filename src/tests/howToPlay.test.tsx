@@ -1,10 +1,23 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import HowToPlay from '../pages/howToPlay';
+import { MemoryRouter } from 'react-router-dom';
+
+// Mock the useNavigate hook
+const mockNavigate = jest.fn();
+jest.mock('zmp-ui', () => ({
+  ...jest.requireActual('zmp-ui'),
+  useNavigate: () => mockNavigate
+}));
 
 describe('HowToPlay page', () => {
   beforeEach(() => {
-    render(<HowToPlay />);
+    render(
+      <MemoryRouter>
+        <HowToPlay />
+      </MemoryRouter>
+    );
+    jest.clearAllMocks();
   });
 
   it('should render the page title', () => {
@@ -41,5 +54,15 @@ describe('HowToPlay page', () => {
     expect(screen.getByText(/Try to control the center columns/i)).toBeInTheDocument();
     expect(screen.getByText(/Watch for your opponent's potential winning moves/i)).toBeInTheDocument();
     expect(screen.getByText(/Look for opportunities to create "double threats"/i)).toBeInTheDocument();
+  });
+
+  it('should render Return to Menu button', () => {
+    expect(screen.getByText('Return to Menu')).toBeInTheDocument();
+  });
+
+  it('should navigate to home page when Return to Menu button is clicked', () => {
+    const returnButton = screen.getByTestId('return-to-menu-button');
+    fireEvent.click(returnButton);
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 });
