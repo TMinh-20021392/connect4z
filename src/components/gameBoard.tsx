@@ -43,9 +43,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ 'data-testid': dataTestId }) => {
     );
   };
   
-  // Handle mouse down event to prevent dragging
-  const handleMouseDown = (event: React.MouseEvent, colIndex: number) => {
+  // Handle cell click - ONE event handler instead of two
+  const handleCellClick = (colIndex: number, event: React.MouseEvent) => {
+    // Prevent default to avoid dragging
     event.preventDefault();
+    
     if (canMakeMove(colIndex)) {
       makeMove(colIndex);
     }
@@ -66,12 +68,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ 'data-testid': dataTestId }) => {
               <Box 
                 key={`${rowIndex}-${colIndex}`}
                 className="w-10 h-10 bg-blue-800 m-1 rounded-full flex items-center justify-center cursor-pointer"
-                onClick={() => {
-                  if (canMakeMove(colIndex)) {
-                    makeMove(colIndex);
-                  }
-                }}
-                onMouseDown={(e) => handleMouseDown(e, colIndex)}
+                onClick={(e) => handleCellClick(colIndex, e)}
                 role="button"
                 aria-label={`Column ${colIndex + 1}`}
               >
