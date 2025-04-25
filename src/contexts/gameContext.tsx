@@ -21,6 +21,7 @@ export interface GameState {
   isAIThinking: boolean;
   turnCount: number;
   humanPlayerNumber: Player; // For single player mode: tracks if human is Player 1 or 2
+  winningCoordinates: [number, number][] | null;
 }
 
 interface GameContextType {
@@ -50,6 +51,7 @@ const initialGameState: GameState = {
   isAIThinking: false,
   turnCount: 0,
   humanPlayerNumber: 1, // Human starts as Player 1 by default
+  winningCoordinates: null,
 };
 
 // Create context
@@ -58,7 +60,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 // Action types for reducer
 type GameAction =
   | { type: "MAKE_MOVE"; col: number; row: number }
-  | { type: "SET_WINNER"; winner: Player }
+  | { type: "SET_WINNER"; winner: Player; coordinates?: [number, number][] }
   | { type: "SET_DRAW" }
   | { type: "TOGGLE_AI_THINKING" }
   | { type: "SWITCH_PLAYER" }
@@ -81,6 +83,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         winner: action.winner,
+        winningCoordinates: action.coordinates || null,
         isGameOver: true,
       };
     case "SET_DRAW":
@@ -124,28 +127,41 @@ const checkForWinner = (
   row: number,
   col: number,
   player: Player
-): boolean => {
-  if (player === null) return false;
+): [boolean, [number, number][]] => {
+  if (player === null) return [false, []];
+  let winningCoords: [number, number][] = [];
 
   // Horizontal check
   let count = 0;
+  let horizontalCoords: [number, number][] = [];
   for (let c = 0; c < COLS; c++) {
     if (board[row][c] === player) {
       count++;
-      if (count >= 4) return true;
+      horizontalCoords.push([row, c]);
+      if (count >= 4) {
+        winningCoords = horizontalCoords.slice(-4); // Get last 4 coordinates
+        return [true, winningCoords];
+      }
     } else {
       count = 0;
+      horizontalCoords = [];
     }
   }
 
   // Vertical check
   count = 0;
+  let verticalCoords: [number, number][] = [];
   for (let r = 0; r < ROWS; r++) {
     if (board[r][col] === player) {
       count++;
-      if (count >= 4) return true;
+      verticalCoords.push([r, col]);
+      if (count >= 4) {
+        winningCoords = verticalCoords.slice(-4); // Get last 4 coordinates
+        return [true, winningCoords];
+      }
     } else {
       count = 0;
+      verticalCoords = [];
     }
   }
 
@@ -158,7 +174,15 @@ const checkForWinner = (
         board[r + 2][c + 2] === player &&
         board[r + 3][c + 3] === player
       ) {
-        return true;
+        return [
+          true,
+          [
+            [r, c],
+            [r + 1, c + 1],
+            [r + 2, c + 2],
+            [r + 3, c + 3],
+          ],
+        ];
       }
     }
   }
@@ -172,12 +196,20 @@ const checkForWinner = (
         board[r - 2][c + 2] === player &&
         board[r - 3][c + 3] === player
       ) {
-        return true;
+        return [
+          true,
+          [
+            [r, c],
+            [r - 1, c + 1],
+            [r - 2, c + 2],
+            [r - 3, c + 3],
+          ],
+        ];
       }
     }
   }
 
-  return false;
+  return [false, []];
 };
 
 // Check if the board is full (draw)
@@ -215,8 +247,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     newBoard[row][col] = gameState.currentPlayer;
 
     // Check if this move resulted in a win
-    if (checkForWinner(newBoard, row, col, gameState.currentPlayer)) {
-      dispatch({ type: "SET_WINNER", winner: gameState.currentPlayer });
+    const [isWinner, winningCoords] = checkForWinner(
+      newBoard,
+      row,
+      col,
+      gameState.currentPlayer
+    );
+    if (isWinner) {
+      dispatch({
+        type: "SET_WINNER",
+        winner: gameState.currentPlayer,
+        coordinates: winningCoords,
+      });
       return;
     }
 
@@ -269,12 +311,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
               tempBoard[row][aiCol] = gameState.currentPlayer;
 
               // Check win condition
-              if (
-                checkForWinner(tempBoard, row, aiCol, gameState.currentPlayer)
-              ) {
+              const [isWinner, winningCoords] = checkForWinner(
+                tempBoard,
+                row,
+                aiCol,
+                gameState.currentPlayer
+              );
+              if (isWinner) {
                 dispatch({
                   type: "SET_WINNER",
                   winner: gameState.currentPlayer,
+                  coordinates: winningCoords,
                 });
               }
               // Check draw condition
