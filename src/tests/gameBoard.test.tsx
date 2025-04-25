@@ -399,11 +399,19 @@ describe('GameBoard', () => {
     const columnCell = getCell(1);
     const preventDefaultSpy = vi.fn();
     
-    // Create a mock event object with preventDefault
-    const mockEvent = { preventDefault: preventDefaultSpy };
+    // Create a mock event with preventDefault property
+    const mockClickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
     
-    // Trigger click with mock event
-    fireEvent.click(columnCell, mockEvent);
+    // Override the preventDefault method with spy
+    Object.defineProperty(mockClickEvent, 'preventDefault', {
+      value: preventDefaultSpy,
+    });
+    
+    // Fire the event directly on the DOM node
+    fireEvent(columnCell, mockClickEvent);
     
     expect(preventDefaultSpy).toHaveBeenCalled();
     expect(mockMakeMove).toHaveBeenCalledWith(0);
