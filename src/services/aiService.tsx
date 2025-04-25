@@ -45,11 +45,21 @@ const evaluateBoard = (board: BoardState, aiPlayer: Player): number => {
   const centerCol = Math.floor(COLS / 2);
   let centerCount = 0;
 
+  // Give higher bonus for center columns
   for (let r = 0; r < ROWS; r++) {
     if (board[r][centerCol] === aiPlayer) centerCount++;
   }
-  score += centerCount * 3;
-
+  // Increase the center column weight
+  score += centerCount * 10;
+  
+  // Also give some weight to columns adjacent to center
+  let nearCenterCount = 0;
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][centerCol-1] === aiPlayer) nearCenterCount++;
+    if (board[r][centerCol+1] === aiPlayer) nearCenterCount++;
+  }
+  score += nearCenterCount * 3;
+  
   return score;
 };
 
@@ -74,6 +84,21 @@ const minimax = (
     if (board[0][c] === null) availableCols.push(c);
   }
 
+  // For empty board or near-empty boards, simply bias toward the center
+  let isEmpty = true;
+  outerLoop: for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] !== null) {
+        isEmpty = false;
+        break outerLoop;
+      }
+    }
+  }
+  
+  if (isEmpty) {
+    return [0, Math.floor(COLS / 2)]; // Return center column for empty board
+  }
+
   if (depth === 0 || isBoardFull(board)) {
     return [evaluateBoard(board, aiPlayer), -1];
   }
@@ -88,7 +113,10 @@ const minimax = (
     }
   }
 
-  let bestCol = availableCols[Math.floor(Math.random() * availableCols.length)];
+  // Use the center column as the default best column if available
+  const centerCol = Math.floor(COLS / 2);
+  let bestCol = availableCols.includes(centerCol) ? centerCol : 
+    availableCols[Math.floor(Math.random() * availableCols.length)];
 
   if (maximizingPlayer) {
     let value = -Infinity;
@@ -128,8 +156,12 @@ const minimax = (
 };
 
 export const calculateAIMove = (board: BoardState, aiPlayer: Player): number | null => {
-  const opponent = aiPlayer === 1 ? 2 : 1;
+  // Short-circuit for empty board - always choose center
+  if (board.every(row => row.every(cell => cell === null))) {
+    return Math.floor(COLS / 2);
+  }
 
+  const opponent = aiPlayer === 1 ? 2 : 1;
   const [_, bestCol] = minimax(board, MAX_DEPTH, -Infinity, Infinity, true, aiPlayer, opponent);
 
   return bestCol;

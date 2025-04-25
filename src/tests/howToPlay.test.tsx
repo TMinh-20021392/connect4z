@@ -1,14 +1,17 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import HowToPlay from '../pages/howToPlay';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, beforeEach, vi, expect } from 'vitest';
 
 // Mock the useNavigate hook
-const mockNavigate = jest.fn();
-jest.mock('zmp-ui', () => ({
-  ...jest.requireActual('zmp-ui'),
-  useNavigate: () => mockNavigate
-}));
+const mockNavigate = vi.fn();
+vi.mock('zmp-ui', async () => {
+  const actual = await vi.importActual<any>('zmp-ui');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 describe('HowToPlay page', () => {
   beforeEach(() => {
@@ -17,7 +20,7 @@ describe('HowToPlay page', () => {
         <HowToPlay />
       </MemoryRouter>
     );
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render the page title', () => {
